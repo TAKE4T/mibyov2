@@ -1,0 +1,76 @@
+{
+  "description": "API request example for testing the diagnosis endpoint",
+  "endpoint": "POST /api/diagnosis",
+  "sample_request": {
+    "answers": [
+      {
+        "questionId": "M1",
+        "answer": "寝つきが悪く、夜中に2-3回目が覚める。朝起きても疲れが取れていない感じがする。"
+      },
+      {
+        "questionId": "M2", 
+        "answer": "日中も不安感が強く、緊張しやすい。特に人前では心臓がドキドキする。"
+      },
+      {
+        "questionId": "M3",
+        "answer": "イライラしやすく、小さなことでも怒りっぽくなる。感情のコントロールが難しい。"
+      },
+      {
+        "questionId": "F5",
+        "answer": "月経前になると特に気分が落ち込み、体調も悪くなる。PMSの症状が強い。"
+      },
+      {
+        "questionId": "F6",
+        "answer": "月経周期が不規則で、量も毎回変わる。生理痛も重い。"
+      }
+    ],
+    "userId": "test_user_001",
+    "sessionId": "diagnosis_session_20250729",
+    "metadata": {
+      "source": "web_app",
+      "version": "1.0",
+      "timestamp": "2025-07-29T10:30:00Z"
+    }
+  },
+  "curl_example": "curl -X POST http://localhost:3000/api/diagnosis \\\n  -H 'Content-Type: application/json' \\\n  -d '{ \"answers\": [{ \"questionId\": \"M1\", \"answer\": \"寝つきが悪く、夜中に目が覚める\" }] }'",
+  "expected_response_structure": {
+    "success": true,
+    "sessionId": "string",
+    "userId": "string or null",
+    "diagnosis": {
+      "summary": "診断要約テキスト",
+      "primary_conditions": ["症状リスト"],
+      "recommended_solutions": [
+        {
+          "recipe_id": "R001",
+          "name": "蒸し療法名",
+          "reason": "推奨理由",
+          "priority": "high|medium|low"
+        }
+      ],
+      "recommended_herbs": [
+        {
+          "name": "生薬名",
+          "reason": "推奨理由", 
+          "effect": "期待される効果"
+        }
+      ],
+      "lifestyle_advice": "生活習慣アドバイス",
+      "precautions": "注意事項"
+    },
+    "userAnswers": "リクエストで送信された回答データ",
+    "recommendations": {
+      "solutions": "推奨蒸し療法の詳細データ",
+      "herbs": "推奨生薬の詳細データ",
+      "matchedSymptoms": "マッチした症状データ"
+    },
+    "processingInfo": {
+      "total_answers": "回答数",
+      "matched_questions": "マッチした質問数",
+      "matched_solutions": "マッチした解決策数", 
+      "matched_herbs": "マッチした生薬数"
+    },
+    "timestamp": "ISO 8601 timestamp",
+    "metadata": "リクエストで送信されたメタデータ"
+  }
+}

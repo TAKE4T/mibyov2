@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: mibyou-diagnosis-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: OPENAI_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: FIREBASE_PROJECT_ID
+        sync: false  # Set this in Render dashboard
+      - key: FIREBASE_PRIVATE_KEY_ID
+        sync: false  # Set this in Render dashboard
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false  # Set this in Render dashboard
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false  # Set this in Render dashboard
+      - key: FIREBASE_CLIENT_ID
+        sync: false  # Set this in Render dashboard
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
