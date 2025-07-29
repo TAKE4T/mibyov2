@@ -23,7 +23,7 @@ https://mibyou-diagnosis-frontend.onrender.com → https://mibyou-diagnosis-api.
 2. **Connect Repository**: `TAKE4T/mibyov2` を選択
 3. **設定**:
    - **Name**: `mibyou-diagnosis-api`
-   - **Root Directory**: `/` (ルート)
+   - **Root Directory**: `/backend`
    - **Environment**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
