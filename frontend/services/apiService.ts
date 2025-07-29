@@ -66,8 +66,8 @@ class ApiService {
   private timeout: number = 30000; // 30 seconds
 
   constructor() {
-    // Use environment variable or default to localhost for development
-    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    // Use Vite environment variable or default to localhost for development
+    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   }
 
   private async fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
