@@ -279,7 +279,12 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
         session_duration: "30-40分",
         recommended_frequency: "週2-3回",
         price: "¥8,800",
-        vector_tags: ["menstrual", "hormone", "circulation"]
+        vector_tags: ["menstrual", "hormone", "circulation"],
+        herbs: [
+          { name: "当帰", name_en: "Angelica sinensis" },
+          { name: "芍薬", name_en: "Paeonia lactiflora" },
+          { name: "川芎", name_en: "Ligusticum chuanxiong" }
+        ]
       },
       {
         recipe_id: "R002",
@@ -293,7 +298,12 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
         session_duration: "30-40分",
         recommended_frequency: "週1-2回",
         price: "¥7,200",
-        vector_tags: ["detox", "edema", "immune"]
+        vector_tags: ["detox", "edema", "immune"],
+        herbs: [
+          { name: "茯苓", name_en: "Poria cocos" },
+          { name: "白朮", name_en: "Atractylodes macrocephala" },
+          { name: "陳皮", name_en: "Citrus reticulata" }
+        ]
       },
       {
         recipe_id: "R003",
@@ -307,7 +317,12 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
         session_duration: "40-50分",
         recommended_frequency: "週2-3回",
         price: "¥9,500",
-        vector_tags: ["sleep", "relaxation", "autonomic"]
+        vector_tags: ["sleep", "relaxation", "autonomic"],
+        herbs: [
+          { name: "酸棗仁", name_en: "Ziziphus jujuba" },
+          { name: "甘草", name_en: "Glycyrrhiza uralensis" },
+          { name: "竜骨", name_en: "Fossilized Bone" }
+        ]
       }
     ];
 
@@ -596,9 +611,9 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Leaf className="w-4 h-4 text-pink-600" />
-                    <span className="text-sm text-pink-700">{t.herbs}: {recipe.herbs.length}種類</span>
+                    <span className="text-sm text-pink-700">{t.herbs}: {recipe.herbs?.length || 0}種類</span>
                   </div>
-                  {recipe.contraindications.length > 0 && (
+                  {(recipe.contraindications?.length || 0) > 0 && (
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-orange-600" />
                       <span className="text-sm text-orange-700">{t.contraindications}: {recipe.contraindications.join(', ')}</span>
@@ -610,9 +625,9 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
               <div className="border-t border-pink-200 pt-3">
                 <p className="text-xs text-pink-600 mb-2">{t.herbs}:</p>
                 <div className="flex flex-wrap gap-1">
-                  {recipe.herbs.map((herb, herbIndex) => (
+                  {(recipe.herbs || []).map((herb, herbIndex) => (
                     <Badge key={herbIndex} variant="outline" className="text-xs border-pink-300 text-pink-700">
-                      {language === 'ja' ? herb.name : herb.name_en}
+                      {language === 'ja' ? herb?.name || `生薬${herbIndex + 1}` : herb?.name_en || `Herb${herbIndex + 1}`}
                     </Badge>
                   ))}
                 </div>

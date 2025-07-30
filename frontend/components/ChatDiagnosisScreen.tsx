@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Bot, User, Send, RotateCcw } from 'lucide-react';
@@ -15,11 +15,9 @@ interface ChatMessage {
 
 // 診断の状態を明確に定義
 type DiagnosisState = 
-  | 'welcome'           // 挨拶画面
   | 'ready'            // 開始準備
   | 'asking'           // 質問中
   | 'waiting_answer'   // 回答待ち
-  | 'processing'       // 処理中
   | 'completed';       // 完了
 
 interface ChatDiagnosisScreenProps {
@@ -36,7 +34,7 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [diagnosisState, setDiagnosisState] = useState<DiagnosisState>('welcome');
+  const [diagnosisState, setDiagnosisState] = useState<DiagnosisState>('ready');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -47,40 +45,68 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
     scrollToBottom();
   }, [messages]);
 
-  // 状態遷移を管理するメインuseEffect
+  // 初期化用useEffect
   useEffect(() => {
-    switch (diagnosisState) {
-      case 'welcome':
-        // 最初の挨拶メッセージ
-        const welcomeMessage: ChatMessage = {
-          id: 'welcome',
-          type: 'bot',
-          content: language === 'ja' 
-            ? 'こんにちは！未病診断へようこそ。\n\nこれから、あなたの体調や症状について27の質問をさせていただきます。機能医学と伝統医学の観点から、あなたに最適な健康アドバイスをご提供いたします。\n\n準備はよろしいですか？' 
-            : 'Hello! Welcome to the Mibyou Diagnosis.\n\nI will ask you 27 questions about your health and symptoms. Based on functional medicine and traditional medicine perspectives, I will provide you with optimal health advice.\n\nAre you ready to begin?',
-          timestamp: new Date()
-        };
-        setMessages([welcomeMessage]);
-        setDiagnosisState('ready');
-        break;
+    console.log(`[ChatDiagnosis] Initial setup`);
+    const welcomeMessage: ChatMessage = {
+      id: 'welcome',
+      type: 'bot',
+      content: language === 'ja' 
+        ? 'こんにちは！未病診断へようこそ。\n\nこれから、あなたの体調や症状について27の質問をさせていただきます。機能医学と伝統医学の観点から、あなたに最適な健康アドバイスをご提供いたします。\n\n準備はよろしいですか？' 
+        : 'Hello! Welcome to the Mibyou Diagnosis.\n\nI will ask you 27 questions about your health and symptoms. Based on functional medicine and traditional medicine perspectives, I will provide you with optimal health advice.\n\nAre you ready to begin?',
+      timestamp: new Date()
+    };
+    setMessages([welcomeMessage]);
+    setDiagnosisState('ready');
+  }, [language]);
 
-      case 'asking':
-        // 質問を表示
-        if (currentQuestionIndex < questions.length) {
-          askCurrentQuestion();
-          setDiagnosisState('waiting_answer');
-        } else {
-          setDiagnosisState('completed');
+  // 質問表示用useEffect
+  useEffect(() => {
+    console.log(`[ChatDiagnosis] State: ${diagnosisState}, Question: ${currentQuestionIndex}/${questions.length}`);
+    
+    if (diagnosisState === 'asking') {
+      if (currentQuestionIndex < questions.length) {
+        console.log(`[ChatDiagnosis] Showing question ${currentQuestionIndex}`);
+        
+        const question = questions[currentQuestionIndex];
+        if (!question) {
+          console.error(`[ChatDiagnosis] Question not found at index ${currentQuestionIndex}`);
+          return;
         }
-        break;
-
-      case 'completed':
-        completeDiagnosis();
-        break;
+        
+        const questionText = language === 'ja' ? question.question : question.questionEn;
+        const options = language === 'ja' ? question.options : question.optionsEn;
+        
+        let questionMessage = `**質問 ${currentQuestionIndex + 1}/${questions.length}**\n\n${questionText}`;
+        
+        if (question.type === 'checkbox') {
+          questionMessage += `\n\n${language === 'ja' ? '※複数選択可能です。選択が完了したら「次へ」ボタンを押してください。' : '※Multiple selection is possible. Press "Next" button when you finish selecting.'}`;
+        }
+        
+        setSelectedOptions([]);
+        addBotMessage(questionMessage, question.id, options);
+        setDiagnosisState('waiting_answer');
+      } else {
+        console.log(`[ChatDiagnosis] All questions completed`);
+        setDiagnosisState('completed');
+      }
     }
-  }, [diagnosisState, currentQuestionIndex, language]);
+    
+    if (diagnosisState === 'completed') {
+      console.log(`[ChatDiagnosis] Completing diagnosis`);
+      const completeMessage = language === 'ja' 
+        ? '全ての質問が完了しました！\n\nありがとうございます。あなたの回答を分析して、最適な健康アドバイスをご提供いたします。\n\n分析結果をご確認ください。' 
+        : 'All questions completed!\n\nThank you. I will analyze your responses and provide optimal health advice.\n\nPlease check your analysis results.';
+      
+      addBotMessage(completeMessage);
+      
+      setTimeout(() => {
+        onComplete(answers);
+      }, 3000);
+    }
+  }, [diagnosisState, currentQuestionIndex, questions, language, addBotMessage, answers, onComplete]);
 
-  const addBotMessage = (content: string, questionId?: string, options?: string[]) => {
+  const addBotMessage = useCallback((content: string, questionId?: string, options?: string[]) => {
     setIsTyping(true);
     
     setTimeout(() => {
@@ -94,11 +120,8 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
       };
       setMessages(prev => [...prev, botMessage]);
       setIsTyping(false);
-      if (questionId) {
-        setWaitingForResponse(true);
-      }
     }, 1000);
-  };
+  }, []);
 
   const addUserMessage = (content: string) => {
     const userMessage: ChatMessage = {
@@ -110,28 +133,16 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
     setMessages(prev => [...prev, userMessage]);
   };
 
-  // 現在の質問を表示（状態機械用）
-  const askCurrentQuestion = () => {
-    if (currentQuestionIndex >= questions.length) return;
-    
-    const question = questions[currentQuestionIndex];
-    const questionText = language === 'ja' ? question.question : question.questionEn;
-    const options = language === 'ja' ? question.options : question.optionsEn;
-    
-    let questionMessage = `**質問 ${currentQuestionIndex + 1}/${questions.length}**\n\n${questionText}`;
-    
-    if (question.type === 'checkbox') {
-      questionMessage += `\n\n${language === 'ja' ? '※複数選択可能です。選択が完了したら「次へ」ボタンを押してください。' : '※Multiple selection is possible. Press "Next" button when you finish selecting.'}`;
-    }
-    
-    setSelectedOptions([]);
-    addBotMessage(questionMessage, question.id, options);
-  };
 
 
   const handleOptionClick = (option: string, questionId: string) => {
+    console.log(`[ChatDiagnosis] Option clicked: ${option}, Current state: ${diagnosisState}`);
+    
     // 状態チェック：回答待ち状態でのみ処理
-    if (diagnosisState !== 'waiting_answer') return;
+    if (diagnosisState !== 'waiting_answer') {
+      console.log(`[ChatDiagnosis] Option click ignored - not in waiting_answer state`);
+      return;
+    }
     
     const currentQuestion = questions[currentQuestionIndex];
     
@@ -173,10 +184,10 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
         return [...filtered, newAnswer];
       });
 
-      // 状態を処理中に変更し、遅延後に次の質問へ
-      setDiagnosisState('processing');
+      // 次の質問へ移動
+      console.log(`[ChatDiagnosis] Moving to next question: ${currentQuestionIndex} -> ${currentQuestionIndex + 1}`);
       setTimeout(() => {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setCurrentQuestionIndex(prev => prev + 1);
         setDiagnosisState('asking');
       }, 1500);
     }
@@ -196,10 +207,10 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
       
       addUserMessage(selectedText);
       
-      // 状態を処理中に変更し、遅延後に次の質問へ
-      setDiagnosisState('processing');
+      // 次の質問へ移動
+      console.log(`[ChatDiagnosis] Moving to next question: ${currentQuestionIndex} -> ${currentQuestionIndex + 1}`);
       setTimeout(() => {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setCurrentQuestionIndex(prev => prev + 1);
         setDiagnosisState('asking');
       }, 1500);
     }
@@ -223,17 +234,6 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
     }, 1000);
   };
 
-  const completeDiagnosis = () => {
-    const completeMessage = language === 'ja' 
-      ? '全ての質問が完了しました！\n\nありがとうございます。あなたの回答を分析して、最適な健康アドバイスをご提供いたします。\n\n分析結果をご確認ください。' 
-      : 'All questions completed!\n\nThank you. I will analyze your responses and provide optimal health advice.\n\nPlease check your analysis results.';
-    
-    addBotMessage(completeMessage);
-    
-    setTimeout(() => {
-      onComplete(answers);
-    }, 3000);
-  };
 
   const renderMessage = (message: ChatMessage) => (
     <div
@@ -260,7 +260,7 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
         
         {/* 選択肢ボタン */}
         {message.type === 'bot' && message.options && message.questionId && diagnosisState === 'waiting_answer' && (
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-2" data-question-id={message.questionId}>
             {message.options.map((option, index) => {
               const currentQuestion = questions[currentQuestionIndex];
               const isSelected = currentQuestion?.type === 'checkbox' && selectedOptions.includes(option);
@@ -307,7 +307,10 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
   );
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
+    <div 
+      className="max-w-4xl mx-auto h-screen flex flex-col bg-gradient-to-b from-green-50 to-white"
+      data-testid="chat-diagnosis"
+    >
       {/* ヘッダー */}
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
         <div className="flex items-center justify-between">
