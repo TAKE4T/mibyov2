@@ -12,9 +12,14 @@ interface ResultScreenProps {
   answers: Answer[];
   onRestart: () => void;
   language: 'ja' | 'en';
+  ragAnalysis?: {
+    symptomScores: any;
+    selectedSolutions: any[];
+    herbDescriptions: any[];
+  };
 }
 
-export function ResultScreen({ questions, answers, onRestart, language }: ResultScreenProps) {
+export function ResultScreen({ questions, answers, onRestart, language, ragAnalysis }: ResultScreenProps) {
   const content = {
     ja: {
       title: '診断結果',
@@ -70,8 +75,17 @@ export function ResultScreen({ questions, answers, onRestart, language }: Result
 
   const t = content[language];
 
-  // 機能医学的分析の強化版
+  // RAGベースの機能医学的分析
   const analyzeFunctionalMedicine = () => {
+    if (ragAnalysis) {
+      return {
+        autonomic: ragAnalysis.symptomScores['自律神経'] || 0,
+        hormone: ragAnalysis.symptomScores['ホルモン'] || 0,
+        immune: ragAnalysis.symptomScores['免疫'] || 0
+      };
+    }
+    
+    // フォールバック：従来の分析
     const analysis = {
       autonomic: 0,
       hormone: 0,
@@ -179,8 +193,18 @@ export function ResultScreen({ questions, answers, onRestart, language }: Result
     };
   };
 
-  // 生薬レシピ推奨（RAGベース）
+  // RAGベースの生薬レシピ推奨
   const recommendHerbRecipes = () => {
+    if (ragAnalysis && ragAnalysis.selectedSolutions) {
+      return ragAnalysis.selectedSolutions.slice(0, 3).map((solution, index) => ({
+        ...solution,
+        score: solution.matchScore * 100,
+        rank: index + 1,
+        adaptationScore: Math.round(solution.matchScore * 100)
+      }));
+    }
+    
+    // フォールバック：従来のロジック
     const functionalAnalysis = analyzeFunctionalMedicine();
     const constitutionType = determineConstitutionType();
     
@@ -233,12 +257,13 @@ export function ResultScreen({ questions, answers, onRestart, language }: Result
         score += 2;
       }
 
-      return { ...recipe, compatibility_score: score };
+      return { ...recipe, compatibility_score: score, adaptationScore: score * 10 };
     });
 
     return recipeScores
       .sort((a, b) => b.compatibility_score - a.compatibility_score)
-      .slice(0, 3);
+      .slice(0, 3)
+      .map((recipe, index) => ({ ...recipe, rank: index + 1 }));
   };
 
   // 症状検出

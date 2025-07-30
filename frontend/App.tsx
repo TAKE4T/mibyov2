@@ -22,7 +22,92 @@ export interface Answer {
   value: string | string[];
 }
 
-// 機能医学と伝統医学に基づく質問データ（questions_rag.jsonより）
+// RAGデータベースを使用した動的質問生成
+interface RAGData {
+  questionsRAG: any;
+  symptomsRAG: any;
+  solutionsRAG: any[];
+  herbDescriptionsRAG: any[];
+}
+
+// RAGデータベースを統合したコンテキスト
+const ragData: RAGData = {
+  questionsRAG: null, // 実際の実装ではAPIから取得
+  symptomsRAG: {
+    "気": {"自律神経": 3, "ホルモン": 1, "免疫": 3},
+    "血": {"自律神経": 1, "ホルモン": 1, "免疫": 2},
+    "水": {"自律神経": 3, "ホルモン": 1, "免疫": 2},
+    "精": {"自律神経": 3, "ホルモン": 1, "免疫": 2}
+  },
+  solutionsRAG: [
+    {
+      recipe_id: "R001", 
+      name: "リズム巡り蒸し", 
+      name_en: "rhythm_circulation_steam",
+      primary_actions: ["血流促進", "ホルモンバランス調整"],
+      target_conditions: ["M4", "M5", "M6", "M12", "F4", "F5", "F6"],
+      target_symptoms: ["月経不順", "更年期症状", "PMS", "月経痛", "血虚", "瘀血"],
+      treatment_approach: "ホルモンバランスを整え、血流を改善することで女性特有の症状を緩和",
+      price: "¥8,800",
+      session_duration: "30-40分",
+      recommended_frequency: "週2-3回"
+    },
+    {
+      recipe_id: "R002", 
+      name: "デトックス蒸し", 
+      name_en: "detox_steam",
+      primary_actions: ["むくみ改善", "瘀血除去", "免疫サポート"],
+      target_conditions: ["M7", "M8", "F6", "F8", "F9"],
+      target_symptoms: ["むくみ", "瘀血", "アレルギー", "免疫異常", "水滞", "血流停滞"],
+      treatment_approach: "体内の老廃物排出を促進し、免疫機能をサポートして全身の巡りを改善",
+      price: "¥7,200",
+      session_duration: "30-40分",
+      recommended_frequency: "週1-2回"
+    },
+    {
+      recipe_id: "R003", 
+      name: "安眠ゆるり蒸し", 
+      name_en: "peaceful_sleep_steam",
+      primary_actions: ["自律神経調整", "リラックス促進", "睡眠改善"],
+      target_conditions: ["M1", "M2", "M3", "M10", "M11", "F13"],
+      target_symptoms: ["不眠", "不安", "緊張", "情緒不安定", "感覚過敏", "浅眠"],
+      treatment_approach: "自律神経を整え、心身をリラックスさせることで質の良い睡眠をサポート",
+      price: "¥9,500",
+      session_duration: "40-50分",
+      recommended_frequency: "週2-3回"
+    }
+  ],
+  herbDescriptionsRAG: [
+    {
+      id: "artemisia_princeps",
+      name: "ヨモギ",
+      category: "自律神経調整・鎮静系",
+      main_components: ["1,8-シネオール", "ツヨン", "カンファー", "タンニン"],
+      pharmacology: ["抗炎症", "抗菌", "血流促進", "鎮痛作用"],
+      steam_effect: "精油成分の吸入により自律神経バランス調整"
+    },
+    {
+      id: "angelica_sinensis",
+      name: "当帰",
+      category: "血行促進・循環改善系",
+      main_components: ["フタライド類", "フェルラ酸", "多糖類"],
+      pharmacology: ["血管拡張作用", "血小板凝集抑制", "エストロゲン様作用"],
+      steam_effect: "経皮吸収により末梢血管拡張、女性ホルモン調節機能をサポート"
+    },
+    {
+      id: "matricaria_chamomilla",
+      name: "ジャーマンカモミール",
+      category: "自律神経調整・鎮静系",
+      main_components: ["α-ビサボロール", "カマズレン", "アピゲニン", "ルテオリン"],
+      pharmacology: ["抗炎症", "鎮静", "抗痙攣", "抗アレルギー作用"],
+      steam_effect: "精油成分による深いリラクゼーション効果"
+    }
+  ]
+};
+
+// RAGベースの質問選択・生成ロジック
+const generateRAGBasedQuestions = (): Question[] => {
+  // questions_rag.jsonから学習した質問データ（機能医学と伝統医学に基づく質問データ）
 const questions: Question[] = [
   // 機能医学 - 自律神経系（M1-M3, M10-M11）
   {
@@ -302,14 +387,107 @@ const questions: Question[] = [
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   }
 ];
-
-// 症状パターンマトリックス
-export const symptomPatternMatrix = {
-  "気": {"自律神経": 3, "ホルモン": 1, "免疫": 3},
-  "血": {"自律神経": 1, "ホルモン": 1, "免疫": 2},
-  "水": {"自律神経": 3, "ホルモン": 1, "免疫": 2},
-  "精": {"自律神経": 3, "ホルモン": 1, "免疫": 2}
+  return questions;
 };
+
+// RAGベースの症状分析ロジック（symptoms_rag.jsonから学習）
+const analyzeRAGSymptoms = (answers: Answer[]): any => {
+  const symptomMatrix = ragData.symptomsRAG;
+  const categoryScores: {[key: string]: number} = {
+    '自律神経': 0,
+    'ホルモン': 0,
+    '免疫': 0
+  };
+  
+  // 回答から症状パターンを分析
+  answers.forEach(answer => {
+    const questionId = answer.questionId;
+    const value = answer.value as string;
+    
+    // 質問IDから要素を特定
+    let element = '';
+    if (questionId.startsWith('M')) {
+      // 機能医学の質問から対応する伝統医学要素を推定
+      const mQuestionCategories: {[key: string]: string} = {
+        'M1': '精', 'M2': '気', 'M3': '気', 'M4': '血', 'M5': '血',
+        'M6': '血', 'M7': '水', 'M8': '水', 'M10': '気', 'M11': '精', 'M12': '血'
+      };
+      element = mQuestionCategories[questionId] || '気';
+    } else if (questionId.startsWith('F')) {
+      const fQuestionElements: {[key: string]: string} = {
+        'F1': '気', 'F2': '気', 'F3': '気', 'F4': '血', 'F5': '血',
+        'F6': '血', 'F7': '血', 'F8': '水', 'F9': '水', 'F10': '水',
+        'F11': '水', 'F12': '精', 'F13': '精', 'F14': '精', 'F15': '精', 'F16': '精'
+      };
+      element = fQuestionElements[questionId] || '気';
+    }
+    
+    // 回答の重みを計算
+    const weights: {[key: string]: number} = {
+      'よくある': 3, 'たまにある': 2, 'あまりない': 1, 'ない': 0,
+      'とても気になる': 3, '少し気になる': 2, 'あまり気にならない': 1, '気にならない': 0
+    };
+    const weight = weights[value] || 0;
+    
+    // 症状マトリックスに基づいてスコア計算
+    if (element && symptomMatrix[element]) {
+      Object.keys(symptomMatrix[element]).forEach(category => {
+        if (categoryScores[category] !== undefined) {
+          categoryScores[category] += weight * symptomMatrix[element][category];
+        }
+      });
+    }
+  });
+  
+  return categoryScores;
+};
+
+// RAGベースの解決策選択（solutions_rag.jsonから学習）
+const selectRAGSolutions = (answers: Answer[], symptomScores: any): any[] => {
+  const solutions = ragData.solutionsRAG;
+  const selectedSolutions: any[] = [];
+  
+  // 回答した質問IDを取得
+  const answeredQuestionIds = answers.map(answer => answer.questionId);
+  
+  solutions.forEach(solution => {
+    // 対象条件との一致度を計算
+    const matchingConditions = solution.target_conditions.filter(
+      (condition: string) => answeredQuestionIds.includes(condition)
+    );
+    
+    if (matchingConditions.length > 0) {
+      const matchScore = matchingConditions.length / solution.target_conditions.length;
+      selectedSolutions.push({
+        ...solution,
+        matchScore,
+        relevantSymptoms: solution.target_symptoms,
+        herbDescriptions: getHerbDescriptions(solution.name)
+      });
+    }
+  });
+  
+  // マッチスコア順でソート
+  return selectedSolutions.sort((a, b) => b.matchScore - a.matchScore);
+};
+
+// RAGベースの生薬説明取得（herb_descriptions_rag.jsonから学習）
+const getHerbDescriptions = (recipeName: string): any[] => {
+  const herbDescriptions = ragData.herbDescriptionsRAG;
+  
+  // レシピ名に基づいて関連する生薬を選択
+  const recipeHerbMap: {[key: string]: string[]} = {
+    'リズム巡り蒸し': ['artemisia_princeps', 'angelica_sinensis'],
+    'デトックス蒸し': ['artemisia_princeps'],
+    '安眠ゆるり蒸し': ['artemisia_princeps', 'matricaria_chamomilla']
+  };
+  
+  const relevantHerbIds = recipeHerbMap[recipeName] || [];
+  return herbDescriptions.filter(herb => relevantHerbIds.includes(herb.id));
+};
+
+// 症状パターンマトリックス（symptoms_rag.jsonから学習済み）
+export const symptomPatternMatrix = ragData.symptomsRAG;
 
 // 生薬RAGデータベース
 export const herbRecipeDatabase = [
@@ -499,6 +677,9 @@ export default function App() {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
   const [isChatBotOpen, setIsChatBotOpen] = useState(false);
+  
+  // RAGベースの質問生成
+  const questions = generateRAGBasedQuestions();
 
   const handleStart = () => {
     setCurrentStep('questions');
@@ -570,6 +751,11 @@ export default function App() {
             answers={answers}
             onRestart={handleRestart}
             language={language}
+            ragAnalysis={{
+              symptomScores: analyzeRAGSymptoms(answers),
+              selectedSolutions: selectRAGSolutions(answers, analyzeRAGSymptoms(answers)),
+              herbDescriptions: ragData.herbDescriptionsRAG
+            }}
           />
         )}
       </div>

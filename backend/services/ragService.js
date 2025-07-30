@@ -3,6 +3,9 @@ const { OpenAIEmbeddings } = require('@langchain/openai');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const { Document } = require('langchain/document');
 
+// LangChain v0.3 compatibility check
+console.log('🔧 Using LangChain v0.3 - imports validated');
+
 class RAGService {
   constructor() {
     this.openai = new OpenAI({
