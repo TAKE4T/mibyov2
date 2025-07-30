@@ -3,6 +3,8 @@ import { StartScreen } from './components/StartScreen';
 import { QuestionScreen } from './components/QuestionScreen';
 import { ResultScreen } from './components/ResultScreen';
 import { LanguageToggle } from './components/LanguageToggle';
+import ChatBot from './components/ChatBot';
+import { MessageCircle } from 'lucide-react';
 
 export interface Question {
   id: string;
@@ -20,8 +22,9 @@ export interface Answer {
   value: string | string[];
 }
 
-// 機能医学と伝統医学に基づく質問データ
+// 機能医学と伝統医学に基づく質問データ（questions_rag.jsonより）
 const questions: Question[] = [
+  // 機能医学 - 自律神経系（M1-M3, M10-M11）
   {
     id: 'M1',
     type: 'radio',
@@ -53,6 +56,27 @@ const questions: Question[] = [
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
   {
+    id: 'M10',
+    type: 'radio',
+    category: '自律神経',
+    categoryEn: 'autonomic_nervous',
+    question: '急にイライラしたり涙が出たり、情緒が不安定になることがありますか？',
+    questionEn: 'Do you experience sudden irritability, crying, or emotional instability?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'M11',
+    type: 'radio',
+    category: '自律神経',
+    categoryEn: 'autonomic_nervous',
+    question: '音や光に敏感になりやすいですか？',
+    questionEn: 'Are you sensitive to sound or light?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 機能医学 - ホルモン系（M4-M6, M12）
+  {
     id: 'M4',
     type: 'radio',
     category: 'ホルモン',
@@ -63,6 +87,37 @@ const questions: Question[] = [
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
   {
+    id: 'M5',
+    type: 'radio',
+    category: 'ホルモン',
+    categoryEn: 'hormone',
+    question: '更年期症状が気になる（ほてり、イライラなど）ことがありますか？（該当しない場合は「ない」を選択）',
+    questionEn: 'Do you experience menopause symptoms (hot flashes, irritability)? (Select "Never" if not applicable)',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'M6',
+    type: 'radio',
+    category: 'ホルモン',
+    categoryEn: 'hormone',
+    question: '月経前に胸の張りや気分の波がありますか？（該当しない場合は「ない」を選択）',
+    questionEn: 'Do you have breast tenderness or mood changes before menstruation? (Select "Never" if not applicable)',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'M12',
+    type: 'radio',
+    category: 'ホルモン',
+    categoryEn: 'hormone',
+    question: '月経痛が強い、または急に重くなったことがありますか？（該当しない場合は「ない」を選択）',
+    questionEn: 'Do you have severe menstrual pain or has it suddenly worsened? (Select "Never" if not applicable)',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 機能医学 - 免疫系（M7-M8）
+  {
     id: 'M7',
     type: 'radio',
     category: '免疫系',
@@ -72,6 +127,17 @@ const questions: Question[] = [
     options: ['よくある', 'たまにある', 'あまりない', 'ない'],
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
+  {
+    id: 'M8',
+    type: 'radio',
+    category: '免疫系',
+    categoryEn: 'immune_system',
+    question: 'アレルギーや自己免疫に関する不調がありますか？',
+    questionEn: 'Do you have allergic or autoimmune disorders?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 伝統医学 - 気（F1-F3）
   {
     id: 'F1',
     type: 'radio',
@@ -93,12 +159,33 @@ const questions: Question[] = [
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
   {
+    id: 'F3',
+    type: 'radio',
+    category: '気',
+    categoryEn: 'qi',
+    question: 'お腹が張りやすく、ガスがたまりやすいですか？',
+    questionEn: 'Do you experience abdominal bloating and gas accumulation?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 伝統医学 - 血（F4-F7）
+  {
     id: 'F4',
     type: 'radio',
     category: '血',
     categoryEn: 'blood',
     question: '顔色が悪く、肌が乾燥しやすいですか？',
     questionEn: 'Do you have poor complexion and dry skin?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F5',
+    type: 'radio',
+    category: '血',
+    categoryEn: 'blood',
+    question: '月経の血量が少ない、または色が薄いですか？（該当しない場合は「ない」を選択）',
+    questionEn: 'Do you have scanty or pale menstrual flow? (Select "Never" if not applicable)',
     options: ['よくある', 'たまにある', 'あまりない', 'ない'],
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
@@ -113,6 +200,17 @@ const questions: Question[] = [
     optionsEn: ['Shoulder stiffness', 'Cold sensitivity', 'Menstrual clots', 'None applicable']
   },
   {
+    id: 'F7',
+    type: 'radio',
+    category: '血',
+    categoryEn: 'blood',
+    question: '唇や爪の色が白っぽくなることがありますか？',
+    questionEn: 'Do your lips or nails appear pale?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 伝統医学 - 水（F8-F11）
+  {
     id: 'F8',
     type: 'radio',
     category: '水',
@@ -122,6 +220,37 @@ const questions: Question[] = [
     options: ['よくある', 'たまにある', 'あまりない', 'ない'],
     optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   },
+  {
+    id: 'F9',
+    type: 'radio',
+    category: '水',
+    categoryEn: 'water',
+    question: 'トイレが近い、または汗が多い（少ない）ことがありますか？',
+    questionEn: 'Do you have frequent urination or abnormal sweating?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F10',
+    type: 'radio',
+    category: '水（脾虚）',
+    categoryEn: 'water_spleen_deficiency',
+    question: '舌の周りに歯の痕がつきやすいですか？',
+    questionEn: 'Do you have teeth marks on your tongue?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F11',
+    type: 'radio',
+    category: '水（津液失調）',
+    categoryEn: 'water_fluid_imbalance',
+    question: 'のどが渇くのに水を飲みたくないことがありますか？',
+    questionEn: 'Do you feel thirsty but have no desire to drink water?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  // 伝統医学 - 精（F12-F16）
   {
     id: 'F12',
     type: 'radio',
@@ -133,12 +262,44 @@ const questions: Question[] = [
     optionsEn: ['Very concerned', 'Somewhat concerned', 'Not much concerned', 'Not concerned']
   },
   {
-    id: 'additional',
-    type: 'input',
-    category: 'その他',
-    categoryEn: 'other',
-    question: 'その他、特に気になる身体の不調があれば詳しく教えてください',
-    questionEn: 'Please describe any other particular physical discomfort in detail'
+    id: 'F13',
+    type: 'radio',
+    category: '精',
+    categoryEn: 'essence',
+    question: '眠りが浅く、夢をよく見ますか？',
+    questionEn: 'Do you have light sleep and frequent dreams?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F14',
+    type: 'radio',
+    category: '精',
+    categoryEn: 'essence',
+    question: '老化や生殖力の衰えを感じますか？',
+    questionEn: 'Do you feel aging or reproductive decline?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F15',
+    type: 'radio',
+    category: '精（腎虚）',
+    categoryEn: 'essence_kidney_deficiency',
+    question: '耳鳴り・難聴・めまいがありますか？',
+    questionEn: 'Do you have tinnitus, hearing loss, or dizziness?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'F16',
+    type: 'radio',
+    category: '精（腎虚）',
+    categoryEn: 'essence_kidney_deficiency',
+    question: '腰や膝に力が入らない・だるいことがありますか？',
+    questionEn: 'Do you feel weakness or fatigue in your lower back or knees?',
+    options: ['よくある', 'たまにある', 'あまりない', 'ない'],
+    optionsEn: ['Often', 'Sometimes', 'Rarely', 'Never']
   }
 ];
 
@@ -337,6 +498,7 @@ export default function App() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
+  const [isChatBotOpen, setIsChatBotOpen] = useState(false);
 
   const handleStart = () => {
     setCurrentStep('questions');
@@ -411,6 +573,22 @@ export default function App() {
           />
         )}
       </div>
+
+      {/* チャットボットボタン */}
+      <button
+        onClick={() => setIsChatBotOpen(true)}
+        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-40"
+        aria-label={language === 'ja' ? 'チャットサポートを開く' : 'Open chat support'}
+      >
+        <MessageCircle className="w-6 h-6" />
+      </button>
+
+      {/* チャットボット */}
+      <ChatBot
+        isOpen={isChatBotOpen}
+        onClose={() => setIsChatBotOpen(false)}
+        language={language}
+      />
     </div>
   );
 }
