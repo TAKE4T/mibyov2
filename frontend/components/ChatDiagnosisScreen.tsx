@@ -45,6 +45,24 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
     scrollToBottom();
   }, [messages]);
 
+  // ボットメッセージ追加関数
+  const addBotMessage = (content: string, questionId?: string, options?: string[]) => {
+    setIsTyping(true);
+    
+    setTimeout(() => {
+      const botMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content,
+        timestamp: new Date(),
+        questionId,
+        options
+      };
+      setMessages(prev => [...prev, botMessage]);
+      setIsTyping(false);
+    }, 1000);
+  };
+
   // 初期化用useEffect
   useEffect(() => {
     console.log(`[ChatDiagnosis] Initial setup`);
@@ -104,24 +122,7 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
         onComplete(answers);
       }, 3000);
     }
-  }, [diagnosisState, currentQuestionIndex, questions, language, addBotMessage, answers, onComplete]);
-
-  const addBotMessage = useCallback((content: string, questionId?: string, options?: string[]) => {
-    setIsTyping(true);
-    
-    setTimeout(() => {
-      const botMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'bot',
-        content,
-        timestamp: new Date(),
-        questionId,
-        options
-      };
-      setMessages(prev => [...prev, botMessage]);
-      setIsTyping(false);
-    }, 1000);
-  }, []);
+  }, [diagnosisState, currentQuestionIndex, questions, language, answers, onComplete]);
 
   const addUserMessage = (content: string) => {
     const userMessage: ChatMessage = {
