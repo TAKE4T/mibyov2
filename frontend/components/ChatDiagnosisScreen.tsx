@@ -27,6 +27,7 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [waitingForResponse, setWaitingForResponse] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -102,37 +103,99 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
     const questionText = language === 'ja' ? question.question : question.questionEn;
     const options = language === 'ja' ? question.options : question.optionsEn;
     
-    const questionMessage = `**質問 ${currentQuestionIndex + 1}/27**\n\n${questionText}`;
+    let questionMessage = `**質問 ${currentQuestionIndex + 1}/${questions.length}**\n\n${questionText}`;
+    
+    // 複数選択の場合は説明を追加
+    if (question.type === 'checkbox') {
+      questionMessage += `\n\n${language === 'ja' ? '※複数選択可能です。選択が完了したら「次へ」ボタンを押してください。' : '※Multiple selection is possible. Press "Next" button when you finish selecting.'}`;
+    }
+    
+    // 選択状態をリセット
+    setSelectedOptions([]);
     
     addBotMessage(questionMessage, question.id, options);
   };
 
   const handleOptionClick = (option: string, questionId: string) => {
-    // ユーザーの回答を追加
-    addUserMessage(option);
+    const currentQuestion = questions[currentQuestionIndex];
     
-    // 回答を保存
-    const newAnswer: Answer = {
-      questionId,
-      value: option
-    };
-    
-    setAnswers(prev => {
-      const filtered = prev.filter(a => a.questionId !== questionId);
-      return [...filtered, newAnswer];
-    });
-
-    setWaitingForResponse(false);
-    setCurrentQuestionIndex(prev => prev + 1);
-
-    // 次の質問を表示
-    setTimeout(() => {
-      if (currentQuestionIndex + 1 >= questions.length) {
-        completeDiagnosis();
+    if (currentQuestion.type === 'checkbox') {
+      // 複数選択の場合
+      const isSelected = selectedOptions.includes(option);
+      let newSelectedOptions;
+      
+      if (isSelected) {
+        // 既に選択されている場合は解除
+        newSelectedOptions = selectedOptions.filter(opt => opt !== option);
       } else {
-        askNextQuestion();
+        // 新規選択
+        newSelectedOptions = [...selectedOptions, option];
       }
-    }, 1500);
+      
+      setSelectedOptions(newSelectedOptions);
+      
+      // 最新の選択状態を保存（まだ次の質問には進まない）
+      const newAnswer: Answer = {
+        questionId,
+        value: newSelectedOptions.length > 0 ? newSelectedOptions : ['該当なし']
+      };
+      
+      setAnswers(prev => {
+        const filtered = prev.filter(a => a.questionId !== questionId);
+        return [...filtered, newAnswer];
+      });
+      
+    } else {
+      // 単一選択の場合（従来通り）
+      addUserMessage(option);
+      
+      const newAnswer: Answer = {
+        questionId,
+        value: option
+      };
+      
+      setAnswers(prev => {
+        const filtered = prev.filter(a => a.questionId !== questionId);
+        return [...filtered, newAnswer];
+      });
+
+      setWaitingForResponse(false);
+      setCurrentQuestionIndex(prev => prev + 1);
+
+      // 次の質問を表示
+      setTimeout(() => {
+        if (currentQuestionIndex + 1 >= questions.length) {
+          completeDiagnosis();
+        } else {
+          askNextQuestion();
+        }
+      }, 1500);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    const currentQuestion = questions[currentQuestionIndex];
+    
+    if (currentQuestion.type === 'checkbox') {
+      // 複数選択の場合、選択された項目をユーザーメッセージとして追加
+      const selectedText = selectedOptions.length > 0 
+        ? selectedOptions.join(', ') 
+        : (language === 'ja' ? '該当なし' : 'None applicable');
+      
+      addUserMessage(selectedText);
+      
+      setWaitingForResponse(false);
+      setCurrentQuestionIndex(prev => prev + 1);
+
+      // 次の質問を表示
+      setTimeout(() => {
+        if (currentQuestionIndex + 1 >= questions.length) {
+          completeDiagnosis();
+        } else {
+          askNextQuestion();
+        }
+      }, 1500);
+    }
   };
 
   const handleStart = () => {
@@ -180,16 +243,39 @@ export function ChatDiagnosisScreen({ questions, onComplete, language }: ChatDia
         {/* 選択肢ボタン */}
         {message.type === 'bot' && message.options && message.questionId && waitingForResponse && (
           <div className="mt-3 space-y-2">
-            {message.options.map((option, index) => (
+            {message.options.map((option, index) => {
+              const currentQuestion = questions[currentQuestionIndex];
+              const isSelected = currentQuestion?.type === 'checkbox' && selectedOptions.includes(option);
+              
+              return (
+                <Button
+                  key={index}
+                  onClick={() => handleOptionClick(option, message.questionId!)}
+                  className={`block w-full text-left text-sm border rounded-lg py-2 px-3 ${
+                    isSelected 
+                      ? 'bg-green-200 border-green-400 text-green-900'
+                      : 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200'
+                  }`}
+                  variant="outline"
+                >
+                  {currentQuestion?.type === 'checkbox' && (
+                    <span className="mr-2">{isSelected ? '✓' : '○'}</span>
+                  )}
+                  {option}
+                </Button>
+              );
+            })}
+            
+            {/* 複数選択の場合は次へボタンを表示 */}
+            {questions[currentQuestionIndex]?.type === 'checkbox' && (
               <Button
-                key={index}
-                onClick={() => handleOptionClick(option, message.questionId!)}
-                className="block w-full text-left text-sm bg-green-50 hover:bg-green-100 text-green-800 border border-green-200 rounded-lg py-2 px-3"
-                variant="outline"
+                onClick={handleNextQuestion}
+                className="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={selectedOptions.length === 0}
               >
-                {option}
+                {language === 'ja' ? '次へ' : 'Next'}
               </Button>
-            ))}
+            )}
           </div>
         )}
       </div>

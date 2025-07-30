@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { RefreshCw, Home, CheckCircle, AlertTriangle, Leaf, Pill, Brain, Heart, Droplet, Zap, TrendingUp, Star, Clock, AlertCircle } from 'lucide-react';
 import type { Question, Answer } from '../App';
-import { diagnosisDatabase, symptomPatternMatrix, herbRecipeDatabase } from '../App';
+import { symptomPatternMatrix } from '../App';
 
 interface ResultScreenProps {
   questions: Question[];
@@ -364,16 +364,16 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
     const detectedSymptoms: string[] = [];
     
     answers.forEach(answer => {
-      const dbItem = diagnosisDatabase.functional_medicine_categories.find(item => item.id === answer.questionId) ||
-                    diagnosisDatabase.traditional_medicine_elements.find(item => item.id === answer.questionId);
+      const question = questions.find(q => q.id === answer.questionId);
       
-      if (dbItem) {
+      if (question) {
         const isPositive = Array.isArray(answer.value) 
           ? answer.value.some(v => !['該当なし', 'None applicable', 'ない', 'Never'].includes(v))
           : !['ない', 'Never', '気にならない', 'Not concerned'].includes(answer.value as string);
 
         if (isPositive) {
-          detectedSymptoms.push(language === 'ja' ? dbItem.symptom : dbItem.symptom_en);
+          const symptomText = language === 'ja' ? question.question : question.questionEn;
+          detectedSymptoms.push(symptomText);
         }
       }
     });
