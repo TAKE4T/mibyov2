@@ -20,6 +20,17 @@ interface ResultScreenProps {
 }
 
 export function ResultScreen({ questions, answers, onRestart, language, ragAnalysis }: ResultScreenProps) {
+  // エラーハンドリング用のステート
+  const [error, setError] = React.useState<string | null>(null);
+
+  // デバッグ情報
+  console.log('ResultScreen props:', { 
+    questionsCount: questions?.length, 
+    answersCount: answers?.length, 
+    language, 
+    ragAnalysis: !!ragAnalysis 
+  });
+
   const content = {
     ja: {
       title: '診断結果',
@@ -75,8 +86,44 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
 
   const t = content[language];
 
-  // RAGベースの機能医学的分析
-  const analyzeFunctionalMedicine = () => {
+  // エラーキャッチ用のレンダリング関数
+  const renderWithErrorHandling = () => {
+    try {
+      return renderMainContent();
+    } catch (err) {
+      console.error('ResultScreen rendering error:', err);
+      return renderErrorFallback(err as Error);
+    }
+  };
+
+  // エラーフォールバック表示
+  const renderErrorFallback = (err: Error) => (
+    <div className="max-w-4xl mx-auto p-8 text-center">
+      <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+        <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-red-800 mb-2">
+          {language === 'ja' ? '結果表示エラー' : 'Result Display Error'}
+        </h2>
+        <p className="text-red-600 mb-4">
+          {language === 'ja' 
+            ? '診断結果の表示中にエラーが発生しました。もう一度お試しください。' 
+            : 'An error occurred while displaying the diagnosis results. Please try again.'}
+        </p>
+        <p className="text-sm text-red-500 mb-4">Error: {err.message}</p>
+        <div className="space-x-4">
+          <Button onClick={onRestart} className="bg-red-600 hover:bg-red-700">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {language === 'ja' ? 'もう一度診断' : 'Restart Diagnosis'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // メインコンテンツの描画
+  const renderMainContent = () => {
+    // RAGベースの機能医学的分析
+    const analyzeFunctionalMedicine = () => {
     if (ragAnalysis) {
       return {
         autonomic: ragAnalysis.symptomScores['自律神経'] || 0,
@@ -218,8 +265,54 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
       })
       .map(answer => answer.questionId);
 
+    // フォールバック用の基本レシピデータ
+    const fallbackRecipes = [
+      {
+        recipe_id: "R001",
+        name: "リズム巡り蒸し",
+        name_en: "rhythm_circulation_steam",
+        primary_actions: ["血流促進", "ホルモンバランス調整"],
+        target_conditions: ["M4", "M5", "M6", "M12", "F4", "F5", "F6"],
+        target_symptoms: ["月経不順", "更年期症状", "PMS", "月経痛", "血虚", "瘀血"],
+        treatment_approach: "ホルモンバランスを整え、血流を改善することで女性特有の症状を緩和",
+        contraindications: ["妊娠中", "重度の出血性疾患"],
+        session_duration: "30-40分",
+        recommended_frequency: "週2-3回",
+        price: "¥8,800",
+        vector_tags: ["menstrual", "hormone", "circulation"]
+      },
+      {
+        recipe_id: "R002",
+        name: "デトックス蒸し",
+        name_en: "detox_steam",
+        primary_actions: ["むくみ改善", "瘀血除去", "免疫サポート"],
+        target_conditions: ["M7", "M8", "F6", "F8", "F9"],
+        target_symptoms: ["むくみ", "瘀血", "アレルギー", "免疫異常", "水滞"],
+        treatment_approach: "体内の老廃物排出を促進し、免疫機能をサポートして全身の巡りを改善",
+        contraindications: ["急性炎症期", "発熱時"],
+        session_duration: "30-40分",
+        recommended_frequency: "週1-2回",
+        price: "¥7,200",
+        vector_tags: ["detox", "edema", "immune"]
+      },
+      {
+        recipe_id: "R003",
+        name: "安眠ゆるり蒸し",
+        name_en: "peaceful_sleep_steam",
+        primary_actions: ["自律神経調整", "リラックス促進", "睡眠改善"],
+        target_conditions: ["M1", "M2", "M3", "M10", "M11", "F13"],
+        target_symptoms: ["不眠", "不安", "緊張", "情緒不安定", "感覚過敏"],
+        treatment_approach: "自律神経を整え、心身をリラックスさせることで質の良い睡眠をサポート",
+        contraindications: ["低血圧", "妊娠初期"],
+        session_duration: "40-50分",
+        recommended_frequency: "週2-3回",
+        price: "¥9,500",
+        vector_tags: ["sleep", "relaxation", "autonomic"]
+      }
+    ];
+
     // 各レシピの適合度を計算
-    const recipeScores = herbRecipeDatabase.map(recipe => {
+    const recipeScores = fallbackRecipes.map(recipe => {
       let score = 0;
       
       // 対象症状との一致度
@@ -592,5 +685,9 @@ export function ResultScreen({ questions, answers, onRestart, language, ragAnaly
         </Button>
       </div>
     </div>
-  );
+    );
+  };
+
+  // エラーハンドリング付きで描画
+  return renderWithErrorHandling();
 }

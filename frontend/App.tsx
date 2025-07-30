@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { QuestionScreen } from './components/QuestionScreen';
+import { ChatDiagnosisScreen } from './components/ChatDiagnosisScreen';
 import { ResultScreen } from './components/ResultScreen';
 import { LanguageToggle } from './components/LanguageToggle';
 import ChatBot from './components/ChatBot';
@@ -673,7 +674,6 @@ export const diagnosisDatabase = {
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<'start' | 'questions' | 'result'>('start');
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
   const [isChatBotOpen, setIsChatBotOpen] = useState(false);
@@ -683,64 +683,34 @@ export default function App() {
 
   const handleStart = () => {
     setCurrentStep('questions');
-    setCurrentQuestionIndex(0);
     setAnswers([]);
   };
 
-  const handleAnswer = (questionId: string, value: string | string[]) => {
-    const newAnswers = answers.filter(a => a.questionId !== questionId);
-    newAnswers.push({ questionId, value });
-    setAnswers(newAnswers);
-  };
-
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setCurrentStep('result');
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
+  const handleChatComplete = (chatAnswers: Answer[]) => {
+    setAnswers(chatAnswers);
+    setCurrentStep('result');
   };
 
   const handleRestart = () => {
     setCurrentStep('start');
-    setCurrentQuestionIndex(0);
     setAnswers([]);
-  };
-
-  const canProceed = () => {
-    const currentQuestion = questions[currentQuestionIndex];
-    const answer = answers.find(a => a.questionId === currentQuestion.id);
-    return answer && (
-      (typeof answer.value === 'string' && answer.value.trim() !== '') ||
-      (Array.isArray(answer.value) && answer.value.length > 0)
-    );
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-pink-50 relative">
-      <LanguageToggle language={language} onToggle={setLanguage} />
+      {currentStep !== 'questions' && (
+        <LanguageToggle language={language} onToggle={setLanguage} />
+      )}
       
-      <div className="container mx-auto px-4 py-8">
+      <div className={currentStep === 'questions' ? '' : 'container mx-auto px-4 py-8'}>
         {currentStep === 'start' && (
           <StartScreen onStart={handleStart} language={language} />
         )}
         
         {currentStep === 'questions' && (
-          <QuestionScreen
-            question={questions[currentQuestionIndex]}
-            questionIndex={currentQuestionIndex}
-            totalQuestions={questions.length}
-            answer={answers.find(a => a.questionId === questions[currentQuestionIndex].id)}
-            onAnswer={handleAnswer}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            canProceed={canProceed()}
+          <ChatDiagnosisScreen
+            questions={questions}
+            onComplete={handleChatComplete}
             language={language}
           />
         )}
@@ -760,21 +730,25 @@ export default function App() {
         )}
       </div>
 
-      {/* チャットボットボタン */}
-      <button
-        onClick={() => setIsChatBotOpen(true)}
-        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-40"
-        aria-label={language === 'ja' ? 'チャットサポートを開く' : 'Open chat support'}
-      >
-        <MessageCircle className="w-6 h-6" />
-      </button>
+      {/* チャットボットボタン（チャット診断中は非表示） */}
+      {currentStep !== 'questions' && (
+        <>
+          <button
+            onClick={() => setIsChatBotOpen(true)}
+            className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-40"
+            aria-label={language === 'ja' ? 'チャットサポートを開く' : 'Open chat support'}
+          >
+            <MessageCircle className="w-6 h-6" />
+          </button>
 
-      {/* チャットボット */}
-      <ChatBot
-        isOpen={isChatBotOpen}
-        onClose={() => setIsChatBotOpen(false)}
-        language={language}
-      />
+          {/* チャットボット */}
+          <ChatBot
+            isOpen={isChatBotOpen}
+            onClose={() => setIsChatBotOpen(false)}
+            language={language}
+          />
+        </>
+      )}
     </div>
   );
 }
