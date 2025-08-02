@@ -159,6 +159,9 @@ class RAGService {
             role: 'system',
             content: `あなたは未病診断の専門家です。東洋医学と機能医学の知識を基に、ユーザーの回答から健康状態を分析し、適切な蒸し療法と生薬を推奨してください。
 
+もし質問内容が専門データベース（herb_descriptions_rag.json、questions_rag.json、symptoms_rag.json）の範囲外の場合は、
+「申し訳ございませんが、こちらの質問は専門データベースの範囲外です。一般的な情報としてお答えしますが、詳細や最新情報については専門機関にご相談ください。」という前置きを付けてから、LLMの一般知識で回答してください。
+
 診断結果は以下のJSON形式で返してください：
 {
   "summary": "診断の要約（200-300文字）",
@@ -179,7 +182,8 @@ class RAGService {
     }
   ],
   "lifestyle_advice": "生活習慣のアドバイス（100-150文字）",
-  "precautions": "注意事項があれば記載"
+  "precautions": "注意事項があれば記載",
+  "is_out_of_scope": true/false
 }`
           },
           {
@@ -204,7 +208,8 @@ class RAGService {
           recommended_solutions: [],
           recommended_herbs: [],
           lifestyle_advice: '',
-          precautions: ''
+          precautions: '',
+          is_out_of_scope: false
         };
       }
     } catch (error) {
