@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { QuestionScreen } from './components/QuestionScreen';
-import { ChatDiagnosisScreen } from './components/ChatDiagnosisScreen';
-import { ResultScreen } from './components/ResultScreen';
+import { SymptomsSelectionScreen } from './components/SymptomsSelectionScreen';
+import { NewResultScreen } from './components/NewResultScreen';
 import { LanguageToggle } from './components/LanguageToggle';
-import ChatBot from './components/ChatBot';
-import { MessageCircle } from 'lucide-react';
 
 export interface Question {
   id: string;
@@ -673,21 +671,24 @@ export const diagnosisDatabase = {
 };
 
 export default function App() {
-  const [currentStep, setCurrentStep] = useState<'start' | 'questions' | 'result'>('start');
+  const [currentStep, setCurrentStep] = useState<'start' | 'symptoms' | 'result'>('start');
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
-  const [isChatBotOpen, setIsChatBotOpen] = useState(false);
   
   // RAGベースの質問生成
   const questions = generateRAGBasedQuestions();
 
   const handleStart = () => {
-    setCurrentStep('questions');
+    setCurrentStep('symptoms');
     setAnswers([]);
   };
 
-  const handleChatComplete = (chatAnswers: Answer[]) => {
-    setAnswers(chatAnswers);
+  const handleSymptomsComplete = (selectedSymptomIds: string[]) => {
+    const symptomsAsAnswers: Answer[] = selectedSymptomIds.map(id => ({
+      questionId: id,
+      value: 'selected'
+    }));
+    setAnswers(symptomsAsAnswers);
     setCurrentStep('result');
   };
 
@@ -698,25 +699,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-pink-50 relative">
-      {currentStep !== 'questions' && (
+      {currentStep !== 'symptoms' && (
         <LanguageToggle language={language} onToggle={setLanguage} />
       )}
       
-      <div className={currentStep === 'questions' ? '' : 'container mx-auto px-4 py-8'}>
+      <div className={currentStep === 'symptoms' ? '' : 'container mx-auto px-4 py-8'}>
         {currentStep === 'start' && (
           <StartScreen onStart={handleStart} language={language} />
         )}
         
-        {currentStep === 'questions' && (
-          <ChatDiagnosisScreen
-            questions={questions}
-            onComplete={handleChatComplete}
+        {currentStep === 'symptoms' && (
+          <SymptomsSelectionScreen
+            onComplete={handleSymptomsComplete}
             language={language}
           />
         )}
         
         {currentStep === 'result' && (
-          <ResultScreen
+          <NewResultScreen
             questions={questions}
             answers={answers}
             onRestart={handleRestart}
@@ -730,25 +730,6 @@ export default function App() {
         )}
       </div>
 
-      {/* チャットボットボタン（チャット診断中は非表示） */}
-      {currentStep !== 'questions' && (
-        <>
-          <button
-            onClick={() => setIsChatBotOpen(true)}
-            className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-40"
-            aria-label={language === 'ja' ? 'チャットサポートを開く' : 'Open chat support'}
-          >
-            <MessageCircle className="w-6 h-6" />
-          </button>
-
-          {/* チャットボット */}
-          <ChatBot
-            isOpen={isChatBotOpen}
-            onClose={() => setIsChatBotOpen(false)}
-            language={language}
-          />
-        </>
-      )}
     </div>
   );
 }

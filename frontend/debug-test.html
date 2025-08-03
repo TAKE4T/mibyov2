@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>診断フローデバッグテスト</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-panel {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .state-info {
+            background: #e1f5fe;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .test-log {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 未病診断フロー デバッグテスト</h1>
+    
+    <div class="debug-panel">
+        <h2>テスト手順</h2>
+        <ol>
+            <li><a href="http://localhost:3000" target="_blank">ローカル開発サーバーを開く</a></li>
+            <li>ブラウザの開発者ツール（F12）を開く</li>
+            <li>Consoleタブを選択</li>
+            <li>診断を開始して各ステップを確認</li>
+        </ol>
+    </div>
+
+    <div class="debug-panel">
+        <h2>チェックポイント</h2>
+        <div class="state-info">
+            <strong>📋 確認項目：</strong><br>
+            ✅ 1. 挨拶メッセージが表示される<br>
+            ✅ 2. 「診断を開始する」ボタンが表示される<br>
+            ✅ 3. ボタンクリックで最初の質問が表示される<br>
+            ✅ 4. 選択肢をクリックできる<br>
+            ✅ 5. 次の質問に正しく進む<br>
+            ✅ 6. 質問が重複しない<br>
+            ✅ 7. 複数選択質問で「次へ」ボタンが機能する<br>
+            ✅ 8. 全27問が順番に表示される<br>
+            ✅ 9. 最後に結果画面が表示される
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>コンソールログの監視</h2>
+        <div class="state-info">
+            <strong>🔍 注目するログ：</strong><br>
+            • <code>[ChatDiagnosis] State transition: welcome, Question: 0/27</code><br>
+            • <code>[ChatDiagnosis] State transition: ready, Question: 0/27</code><br>
+            • <code>[ChatDiagnosis] State transition: asking, Question: 0/27</code><br>
+            • <code>[ChatDiagnosis] Option clicked: [選択肢], Current state: waiting_answer</code><br>
+            • エラーメッセージがないか確認
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>既知の問題と対処法</h2>
+        <div class="error">
+            <strong>❌ 質問が重複する場合：</strong><br>
+            状態機械の遷移ログを確認し、asking→waiting_answer→processing→askingの流れが正しいかチェック
+        </div>
+        <div class="error">
+            <strong>❌ ボタンが反応しない場合：</strong><br>
+            現在の状態がwaitingでない可能性。ログで状態を確認
+        </div>
+        <div class="error">
+            <strong>❌ 結果画面でエラーが出る場合：</strong><br>
+            answers配列とquestions配列の整合性を確認
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>手動テストスクリプト</h2>
+        <button onclick="openDevServer()">開発サーバーを開く</button>
+        <button onclick="copyDebugScript()">デバッグスクリプトをコピー</button>
+        
+        <div class="test-log" id="debugScript" style="display: none;">
+// ブラウザのコンソールで実行するデバッグスクリプト
+console.log("=== 診断フローデバッグ開始 ===");
+
+// 状態監視
+let stateWatcher = setInterval(() => {
+    const chatComponent = document.querySelector('[data-testid="chat-diagnosis"]');
+    if (chatComponent) {
+        console.log("Chat component found");
+        clearInterval(stateWatcher);
+    }
+}, 1000);
+
+// 質問数チェック
+setTimeout(() => {
+    const questionElements = document.querySelectorAll('[data-question-id]');
+    console.log(`質問要素数: ${questionElements.length}`);
+}, 5000);
+        </div>
+    </div>
+
+    <script>
+        function openDevServer() {
+            window.open('http://localhost:3000', '_blank');
+        }
+        
+        function copyDebugScript() {
+            const script = document.getElementById('debugScript');
+            script.style.display = 'block';
+            script.select();
+            document.execCommand('copy');
+            alert('デバッグスクリプトをコピーしました！\nブラウザのコンソールに貼り付けて実行してください。');
+        }
+    </script>
+</body>
+</html>
